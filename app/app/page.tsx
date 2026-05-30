@@ -1,7 +1,7 @@
-"use client"
-import { useState, useEffect, useRef } from "react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
+"use client";
 
+import { useState, useEffect, useRef } from "react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
 const STORAGE_KEY = "forge_v4";
 
 // ─── Default Data ───────────────────────────────────────────────────────────
