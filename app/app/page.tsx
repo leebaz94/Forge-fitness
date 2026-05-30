@@ -1,4 +1,4 @@
-use client
+"use client"
 import { useState, useEffect, useRef } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
 
