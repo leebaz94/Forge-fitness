@@ -729,6 +729,7 @@ Give personalised, conversational coaching advice. Mention if weight change look
                     <div style={{display:"flex",gap:5}}>
                       <button className="ghost" style={{fontSize:10,padding:"3px 9px"}} onClick={()=>startEdit(workout)}>Edit</button>
                       <button className="ghost" style={{fontSize:10,padding:"3px 9px"}} onClick={()=>setActiveWorkout(isActive?null:workout.id)}>{isActive?"Collapse":"Log"}</button>
+                      <button onClick={()=>{ if(window.confirm(`Delete "${workout.name}"?`)) setWorkoutPlan(p=>p.filter(w=>w.id!==workout.id)); }} style={{background:"transparent",border:"1px solid #ff444455",color:"#ff4444",padding:"3px 9px",fontSize:10,borderRadius:4,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                     </div>
                   </div>
                 </div>
