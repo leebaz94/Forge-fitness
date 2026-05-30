@@ -10,5 +10,11 @@
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/node": "latest"
   }
 }
