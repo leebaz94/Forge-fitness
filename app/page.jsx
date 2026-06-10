@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
@@ -1100,4 +1101,394 @@ export default function App(){
                     <button className="ghost" style={{fontSize:11,marginBottom:14,width:"100%"}} onClick={()=>setShowAddExModal(workout.id)}>+ Add Exercise</button>
                     <div style={{borderTop:"1px solid #1e1e2e",paddingTop:14}}>
                       <div style={{...lbl}}>SESSION NOTES</div>
-                      <textarea rows={3} placeholder="How did it feel? PRs, adjustments..." value={workoutNotes[`${workout.id}-${today}`]||""} onChange={e=>setWorkoutNotes(p=>({...p,[`${workout.id}-${today}`]:e.target.value}))} style={{fontSize:12,line
+                      <textarea rows={3} placeholder="How did it feel? PRs, adjustments..." value={workoutNotes[`${workout.id}-${today}`]||""} onChange={e=>setWorkoutNotes(p=>({...p,[`${workout.id}-${today}`]:e.target.value}))} style={{fontSize:12,lineHeight:1.6}}/>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab==="history"&&(()=>{
+        const sessions=getSessionHistory();
+        const grouped=groupSessionsByWeek(sessions);
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div><div className="hd" style={{fontSize:22}}>WORKOUT HISTORY</div><div style={{fontSize:11,color:"#555",marginTop:2}}>Every session saved · tap to review sets & weights</div></div>
+            {sessions.length===0&&<div style={{...card,textAlign:"center",padding:"50px 20px"}}><div style={{fontSize:32,marginBottom:12}}>📋</div><div style={{fontSize:14,color:"#d4ff00",marginBottom:8}}>No sessions logged yet</div><div style={{fontSize:12,color:"#555",lineHeight:1.7}}>Head to Train, log a workout and tick sets — it'll appear here.</div></div>}
+            {Object.entries(grouped).map(([weekLabel,weekSessions])=>(
+              <div key={weekLabel}>
+                <button onClick={()=>setCollapsedHistoryWeeks(p=>({...p,[weekLabel]:!p[weekLabel]}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"6px 0",marginBottom:8,fontFamily:"inherit"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span className="hd" style={{fontSize:14,color:"#d4ff00",letterSpacing:2}}>{weekLabel}</span>
+                    <span style={{fontSize:10,background:"#d4ff0022",color:"#d4ff00",padding:"2px 8px",borderRadius:10,border:"1px solid #d4ff0044"}}>{weekSessions.length} session{weekSessions.length!==1?"s":""}</span>
+                  </div>
+                  <span style={{color:"#555",fontSize:14}}>{collapsedHistoryWeeks[weekLabel]?"▼":"▲"}</span>
+                </button>
+                {!collapsedHistoryWeeks[weekLabel]&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:8}}>
+                    {weekSessions.map(session=>{
+                      const sessionKey=`${session.wId}-${session.date}`;
+                      const isExpanded=expandedHistorySession===sessionKey;
+                      return(
+                        <div key={sessionKey} style={{...card,padding:14,borderColor:isExpanded?"#d4ff0033":"#1e1e2e"}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>setExpandedHistorySession(isExpanded?null:sessionKey)}>
+                            <div style={{flex:1}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                                <span className="tag" style={{fontSize:9}}>{session.wDay}</span>
+                                <span style={{fontSize:14,fontWeight:500}}>{session.wName}</span>
+                              </div>
+                              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                                <span style={{fontSize:11,color:"#555"}}>{new Date(session.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
+                                <span style={{fontSize:10,background:session.pct===100?"#d4ff0022":"#1e1e2e",color:session.pct===100?"#d4ff00":"#555",padding:"1px 8px",borderRadius:10,border:`1px solid ${session.pct===100?"#d4ff0044":"#2a2a3a"}`}}>{session.pct}% complete</span>
+                              </div>
+                            </div>
+                            <span style={{color:"#555",fontSize:14,marginLeft:10}}>{isExpanded?"▲":"▼"}</span>
+                          </div>
+                          {isExpanded&&(
+                            <div style={{marginTop:14,borderTop:"1px solid #1e1e2e",paddingTop:14}}>
+                              {session.exDetails.map((ex,i)=>{
+                                const doneSets=ex.sets.filter(s=>s.done);
+                                if(doneSets.length===0)return null;
+                                const typeColor=ex.type==="Strength"?"#d4ff00":ex.type==="Distance"?"#4ade80":ex.type==="Timed"?"#a78bfa":"#f97316";
+                                return(
+                                  <div key={i} style={{marginBottom:14,paddingBottom:14,borderBottom:"1px solid #1e1e2e"}}>
+                                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                                      <span style={{fontSize:13,fontWeight:500}}>{ex.exName}</span>
+                                      <span style={{fontSize:9,background:typeColor+"22",color:typeColor,padding:"1px 6px",borderRadius:8,border:`1px solid ${typeColor}44`}}>{ex.type}</span>
+                                    </div>
+                                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                                      {doneSets.map((s,si)=>(
+                                        <div key={si} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                                          <span style={{color:"#555",minWidth:20,fontSize:10}}>S{si+1}</span>
+                                          <span style={{color:"#e8e4d9"}}>{formatSetSummary(s,ex.type)}</span>
+                                          {ex.type==="Strength"&&s.weight&&s.reps&&parseInt(s.reps)>1&&<span style={{fontSize:9,color:"#555",marginLeft:"auto"}}>e1RM: {est1RM(parseFloat(s.weight),parseInt(s.reps))}kg</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {ex.type==="Strength"&&doneSets.some(s=>s.weight)&&<div style={{marginTop:6,fontSize:10,color:"#d4ff00"}}>Top set: {Math.max(...doneSets.map(s=>parseFloat(s.weight)||0))}kg</div>}
+                                    {ex.type==="Distance"&&doneSets.some(s=>s.dist)&&(()=>{
+                                      const td=doneSets.reduce((sum,s)=>sum+(parseFloat(s.dist)||0),0);
+                                      const tt=doneSets.reduce((sum,s)=>sum+(parseFloat(s.time)||0),0);
+                                      const ap=td>0&&tt>0?tt/td:null;
+                                      return<div style={{marginTop:6,fontSize:10,color:"#4ade80"}}>Total: {td.toFixed(1)}km{ap?` · Avg: ${formatPace(ap*60)}/km`:""}</div>;
+                                    })()}
+                                  </div>
+                                );
+                              })}
+                              {session.notes&&<div style={{background:"#0d1117",padding:"10px 12px",borderRadius:4,borderLeft:"2px solid #d4ff0055",fontSize:12,color:"#aaa",lineHeight:1.6}}>💬 {session.notes}</div>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {tab==="plans"&&(()=>{
+        const [pickingExForPlan,setPickingExForPlan]=useState(null);
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div><div className="hd" style={{fontSize:22}}>WORKOUT PLANS</div><div style={{fontSize:11,color:"#555",marginTop:2}}>Preview · load full workout · or pick individual exercises</div></div>
+            {planAddSuccess&&<div style={{background:"#d4ff0015",border:"1px solid #d4ff0044",borderRadius:6,padding:"10px 14px",fontSize:12,color:"#d4ff00",textAlign:"center"}}>✓ {planAddSuccess}</div>}
+            <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+              {planCategories.map(c=>{
+                const col=categoryColor[c]||"#d4ff00";
+                return<button key={c} onClick={()=>setPlanFilter(c)} style={{padding:"5px 14px",fontSize:11,background:planFilter===c?col:"transparent",border:`1px solid ${planFilter===c?col:"#2a2a3a"}`,borderRadius:20,cursor:"pointer",color:planFilter===c?"#0a0a0f":"#aaa",fontFamily:"inherit"}}>{c}</button>;
+              })}
+            </div>
+            {filteredPlans.map(plan=>{
+              const col=categoryColor[plan.category]||"#d4ff00";
+              const isExpanded=expandedPlan===plan.id;
+              return(
+                <div key={plan.id} style={{...card,borderColor:isExpanded?col+"44":"#1e1e2e"}}>
+                  <div style={{cursor:"pointer"}} onClick={()=>setExpandedPlan(isExpanded?null:plan.id)}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                          <span style={{fontSize:10,background:col+"22",color:col,border:`1px solid ${col}44`,padding:"2px 8px",borderRadius:2,letterSpacing:1,textTransform:"uppercase"}}>{plan.category}</span>
+                          <span className="tag" style={{fontSize:9}}>{plan.day}</span>
+                        </div>
+                        <div style={{fontSize:15,fontWeight:500,marginBottom:4}}>{plan.name}</div>
+                        <div style={{fontSize:11,color:"#555"}}>{plan.description}</div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,marginLeft:10,flexShrink:0}}>
+                        <div style={{fontSize:11,color:"#555"}}>{plan.exercises.length} exercises</div>
+                        <span style={{color:"#555",fontSize:14}}>{isExpanded?"▲":"▼"}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {isExpanded&&(
+                    <div style={{borderTop:"1px solid #1e1e2e",paddingTop:14}}>
+                      {plan.exercises.map((ex,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",background:"#0d1117",borderRadius:4,marginBottom:6}}>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:12,fontWeight:500}}>{ex.exName}</div>
+                            <div style={{fontSize:10,color:"#555",marginTop:2}}>{ex.sets} sets × {ex.targetReps} reps · {exerciseDB[ex.exName]?.type||"Strength"}</div>
+                          </div>
+                          {workoutPlan.length>0&&(
+                            <div style={{position:"relative"}}>
+                              <button className="ghost" style={{fontSize:10,padding:"3px 9px",flexShrink:0}} onClick={()=>setPickingExForPlan(pickingExForPlan===`${plan.id}-${i}`?null:`${plan.id}-${i}`)}>+ Add</button>
+                              {pickingExForPlan===`${plan.id}-${i}`&&(
+                                <div style={{position:"absolute",right:0,top:30,background:"#111118",border:"1px solid #d4ff0044",borderRadius:6,zIndex:10,minWidth:180,boxShadow:"0 8px 24px #000a"}}>
+                                  <div style={{fontSize:10,color:"#555",padding:"8px 12px 4px",letterSpacing:1}}>ADD TO WHICH WORKOUT?</div>
+                                  {workoutPlan.map(w=>(
+                                    <button key={w.id} onClick={()=>{addSingleExerciseFromPlan(ex.exName,ex.sets,ex.targetReps,w.id);setPickingExForPlan(null);}} style={{display:"block",width:"100%",padding:"10px 12px",background:"transparent",border:"none",borderTop:"1px solid #1e1e2e",color:"#e8e4d9",fontFamily:"inherit",fontSize:12,cursor:"pointer",textAlign:"left"}}>
+                                      {w.name}<span style={{fontSize:10,color:"#555",marginLeft:6}}>{w.day}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <button className="btn" style={{width:"100%",padding:12,fontSize:13,marginTop:8}} onClick={()=>addFullPlanToTraining(plan)}>+ Load Full Workout to Train</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {tab==="progress"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div><div className="hd" style={{fontSize:22}}>PROGRESS</div><div style={{fontSize:11,color:"#555",marginTop:2}}>All sessions unified per exercise</div></div>
+          <div style={card}>
+            {sectionBtn(progressCollapsed["strength"],()=>setProgressCollapsed(p=>({...p,strength:!p.strength})),"STRENGTH")}
+            {!progressCollapsed["strength"]&&<div style={{display:"flex",flexDirection:"column",gap:16,marginTop:12}}>
+              {strengthEx.length===0&&<div style={{fontSize:12,color:"#555"}}>Log strength exercises to see progress.</div>}
+              {strengthEx.map(exName=>{
+                const data=getUnifiedProgress(exName);
+                const last=data.slice(-1)[0],first=data[0];
+                const gain=last&&first?+(last.value-first.value).toFixed(1):0;
+                const exKey=`s-${exName}`;
+                return(
+                  <div key={exName}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,cursor:"pointer"}} onClick={()=>setProgressCollapsed(p=>({...p,[exKey]:!p[exKey]}))}>
+                      <div><div style={{fontSize:13}}>{exName}</div><div style={{display:"flex",gap:4,marginTop:2,flexWrap:"wrap"}}>{(exerciseDB[exName]?.muscles||[]).map(m=><span key={m} style={{fontSize:9,background:"#1e1e2e",color:"#aaa",padding:"1px 6px",borderRadius:8}}>{m}</span>)}</div></div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {last&&<div className="hd" style={{fontSize:20,color:"#d4ff00"}}>{last.value}kg</div>}
+                        {gain!==0&&<div style={{fontSize:10,color:gain>0?"#4ade80":"#ef4444"}}>{gain>0?"+":""}{gain}kg</div>}
+                        <span style={{color:"#555",fontSize:12}}>{progressCollapsed[exKey]?"▼":"▲"}</span>
+                      </div>
+                    </div>
+                    {!progressCollapsed[exKey]&&(data.length<2?<div style={{fontSize:10,color:"#333",padding:"6px 0"}}>Log 2+ sessions to see chart</div>:(
+                      <ResponsiveContainer width="100%" height={90}><LineChart data={data}><XAxis dataKey="label" tick={{fill:"#555",fontSize:9}}/><YAxis hide domain={["dataMin-2","dataMax+2"]}/><Tooltip content={<ChartTip/>}/><Line type="monotone" dataKey="value" stroke="#d4ff00" strokeWidth={2} dot={{fill:"#d4ff00",r:3}} name="Weight" unit="kg"/></LineChart></ResponsiveContainer>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>}
+          </div>
+          <div style={card}>
+            {sectionBtn(progressCollapsed["cardio"],()=>setProgressCollapsed(p=>({...p,cardio:!p.cardio})),"CARDIO")}
+            {!progressCollapsed["cardio"]&&<div style={{display:"flex",flexDirection:"column",gap:16,marginTop:12}}>
+              {cardioEx.length===0&&<div style={{fontSize:12,color:"#555"}}>Log cardio to see progress.</div>}
+              {cardioEx.map(exName=>{
+                const data=getUnifiedProgress(exName);
+                const last=data.slice(-1)[0];
+                const exType=exerciseDB[exName]?.type;
+                const unitLabel=exType==="Distance"?"km":exType==="Timed"?"min":"rds";
+                const exKey=`c-${exName}`;
+                return(
+                  <div key={exName}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,cursor:"pointer"}} onClick={()=>setProgressCollapsed(p=>({...p,[exKey]:!p[exKey]}))}>
+                      <div><div style={{fontSize:13}}>{exName}</div><div style={{fontSize:10,color:exType==="Distance"?"#4ade80":exType==="Timed"?"#a78bfa":"#f97316",marginTop:2}}>{exType}</div></div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {last&&<div className="hd" style={{fontSize:18,color:"#4ade80"}}>{last.value}{unitLabel}</div>}
+                        <span style={{color:"#555",fontSize:12}}>{progressCollapsed[exKey]?"▼":"▲"}</span>
+                      </div>
+                    </div>
+                    {!progressCollapsed[exKey]&&(data.length<2?<div style={{fontSize:10,color:"#333",padding:"6px 0"}}>Log 2+ sessions to see chart</div>:(
+                      <ResponsiveContainer width="100%" height={90}><LineChart data={data}><XAxis dataKey="label" tick={{fill:"#555",fontSize:9}}/><YAxis hide/><Tooltip content={<ChartTip/>}/><Line type="monotone" dataKey="value" stroke="#4ade80" strokeWidth={2} dot={{fill:"#4ade80",r:3}} name={exType} unit={unitLabel}/></LineChart></ResponsiveContainer>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>}
+          </div>
+        </div>
+      )}
+
+      {tab==="pbs"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div className="hd" style={{fontSize:22}}>PERSONAL BESTS</div>
+          <div style={card}>
+            {sectionBtn(pbCollapsed.strength,()=>setPbCollapsed(p=>({...p,strength:!p.strength})),"STRENGTH")}
+            {!pbCollapsed.strength&&(strengthPBs.length===0?<div style={{fontSize:12,color:"#555",paddingTop:10}}>Log workouts with weight to see PBs.</div>:
+              <div style={{marginTop:10}}>{strengthPBs.sort((a,b)=>b[1].value-a[1].value).map(([name,pb],i)=>(
+                <div key={name} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<strengthPBs.length-1?"1px solid #1e1e2e":"none"}}>
+                  <div className="hd" style={{fontSize:20,minWidth:28,textAlign:"center",color:i===0?"#d4ff00":i===1?"#aaa":i===2?"#cd7f32":"#444"}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`}</div>
+                  <div style={{flex:1}}><div style={{fontSize:13}}>{name}</div><div style={{fontSize:10,color:"#555",marginTop:2}}>{pb.date}</div></div>
+                  <div className="hd" style={{fontSize:24,color:"#d4ff00"}}>{pb.value}<span style={{fontSize:11,color:"#555"}}>{pb.unit}</span></div>
+                </div>
+              ))}</div>
+            )}
+          </div>
+          <div style={card}>
+            {sectionBtn(pbCollapsed.cardio,()=>setPbCollapsed(p=>({...p,cardio:!p.cardio})),"CARDIO")}
+            {!pbCollapsed.cardio&&(cardioPBs.length===0?<div style={{fontSize:12,color:"#555",paddingTop:10}}>Log cardio to see PBs.</div>:
+              <div style={{marginTop:10}}>{cardioPBs.map(([name,pb],i)=>(
+                <div key={name} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:i<cardioPBs.length-1?"1px solid #1e1e2e":"none"}}>
+                  <div className="hd" style={{fontSize:20,minWidth:28,textAlign:"center",color:i===0?"#4ade80":i===1?"#aaa":"#444"}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`}</div>
+                  <div style={{flex:1}}><div style={{fontSize:13}}>{name}</div><div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:9,color:pb.type==="Distance"?"#4ade80":pb.type==="Timed"?"#a78bfa":"#f97316",background:pb.type==="Distance"?"#4ade8022":pb.type==="Timed"?"#a78bfa22":"#f9731622",padding:"1px 6px",borderRadius:8}}>{pb.type}</span><span style={{fontSize:10,color:"#555"}}>{pb.date}</span></div></div>
+                  <div className="hd" style={{fontSize:24,color:"#4ade80"}}>{pb.value}<span style={{fontSize:11,color:"#555"}}>{pb.unit}</span></div>
+                </div>
+              ))}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab==="calories"&&(()=>{
+        const isToday=calDate===today;
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div className="hd" style={{fontSize:22}}>NUTRITION LOG</div><button className="btn" style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",fontSize:12}} onClick={()=>{setShowScanner(true);setScannerState("idle");}}>📷 Scan</button></div>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <button className="ghost" style={{padding:"6px 12px",fontSize:18}} onClick={()=>{const d=new Date(calDate);d.setDate(d.getDate()-1);setCalDate(d.toISOString().split("T")[0]);}}>‹</button>
+              <div style={{flex:1,textAlign:"center"}}><input type="date" value={calDate} max={today} onChange={e=>setCalDate(e.target.value)} style={{background:"transparent",border:"none",color:"#d4ff00",fontSize:14,fontFamily:"inherit",textAlign:"center",width:"100%",cursor:"pointer"}}/>{isToday&&<div style={{fontSize:10,color:"#555",marginTop:2}}>Today</div>}</div>
+              <button className="ghost" style={{padding:"6px 12px",fontSize:18,opacity:isToday?.3:1}} onClick={()=>{if(isToday)return;const d=new Date(calDate);d.setDate(d.getDate()+1);setCalDate(d.toISOString().split("T")[0]);}}>›</button>
+            </div>
+            <div style={card}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                <div><div style={{fontSize:10,color:"#555"}}>{isToday?"TODAY":calDate}</div><div className="hd" style={{fontSize:38,color:"#d4ff00",lineHeight:1}}>{Math.round(viewCals)}</div><div style={{fontSize:10,color:"#555"}}>kcal</div></div>
+                {calcResult&&<div style={{textAlign:"right"}}><div style={{fontSize:10,color:"#555"}}>Target</div><div className="hd" style={{fontSize:26}}>{calcResult.target}</div><div style={{fontSize:10,color:viewCals>calcResult.target?"#ef4444":"#4ade80"}}>{viewCals>calcResult.target?`+${Math.round(viewCals-calcResult.target)} over`:`${Math.round(calcResult.target-viewCals)} left`}</div></div>}
+              </div>
+              {calcResult&&<div className="pbar" style={{marginBottom:12}}><div className="pfill" style={{width:`${Math.min((viewCals/calcResult.target)*100,100)}%`,background:viewCals>calcResult.target?"#ef4444":"#d4ff00"}}/></div>}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[["Protein",viewP],["Carbs",viewC],["Fat",viewF]].map(([l,v])=><div key={l} style={pill}><div style={{fontSize:9,color:"#555"}}>{l.toUpperCase()}</div><div className="hd" style={{fontSize:20,marginTop:3}}>{Math.round(v)}g</div></div>)}</div>
+            </div>
+            <div style={card}><div style={{fontSize:11,color:"#d4ff00",letterSpacing:1,marginBottom:12}}>THIS WEEK</div><ResponsiveContainer width="100%" height={140}><BarChart data={weekCalData} barSize={22}><CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" vertical={false}/><XAxis dataKey="label" tick={{fill:"#555",fontSize:10}}/><YAxis tick={{fill:"#555",fontSize:10}}/><Tooltip content={<ChartTip/>}/>{calcResult&&<ReferenceLine y={calcResult.target} stroke="#d4ff0066" strokeDasharray="4 4"/>}<Bar dataKey="calories" fill="#d4ff0033" stroke="#d4ff00" strokeWidth={1} name="Calories" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div>
+            {isToday&&<div style={card}><div style={{fontSize:11,color:"#d4ff00",letterSpacing:1,marginBottom:10}}>QUICK ADD</div><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{COMMON_FOODS.map(f=><button key={f.name} className="ghost" style={{fontSize:11}} onClick={()=>setCalorieLog(p=>[...p,{...f,date:calDate,id:Date.now()}])}>{f.name} · {f.calories}kcal</button>)}</div></div>}
+            {isToday&&<div style={card}><div style={{fontSize:11,color:"#d4ff00",letterSpacing:1,marginBottom:10}}>ADD CUSTOM</div><div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",gap:7,marginBottom:8}}>{["name","calories","protein","carbs","fat"].map(f=><input key={f} type={f==="name"?"text":"number"} placeholder={f.charAt(0).toUpperCase()+f.slice(1)} value={customFood[f]} onChange={e=>setCustomFood(p=>({...p,[f]:e.target.value}))}/>)}</div><button className="btn" onClick={()=>{if(!customFood.name||!customFood.calories)return;setCalorieLog(p=>[...p,{name:customFood.name,calories:parseFloat(customFood.calories)||0,protein:parseFloat(customFood.protein)||0,carbs:parseFloat(customFood.carbs)||0,fat:parseFloat(customFood.fat)||0,date:calDate,id:Date.now()}]);setCustomFood({name:"",calories:"",protein:"",carbs:"",fat:""});}}>+ Log Food</button></div>}
+            {calorieLog.filter(e=>e.date===calDate).length>0&&<div style={card}><div style={{fontSize:11,color:"#d4ff00",letterSpacing:1,marginBottom:10}}>{isToday?"TODAY'S LOG":calDate}</div>{calorieLog.filter(e=>e.date===calDate).map(entry=><div key={entry.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid #1e1e2e"}}><div><div style={{fontSize:13}}>{entry.name}</div><div style={{fontSize:10,color:"#555"}}>P:{entry.protein||0}g C:{entry.carbs||0}g F:{entry.fat||0}g</div></div><div style={{display:"flex",alignItems:"center",gap:9}}><span className="hd" style={{fontSize:18,color:"#d4ff00"}}>{entry.calories}</span><button className="ghost" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>setCalorieLog(p=>p.filter(e=>e.id!==entry.id))}>✕</button></div></div>)}</div>}
+          </div>
+        );
+      })()}
+
+      {tab==="checkin"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div className="hd" style={{fontSize:22}}>WEEKLY CHECK-IN</div>
+          <div style={card}>
+            <div style={{...lbl}}>WEIGHT (kg)</div>
+            <input type="number" placeholder="e.g. 81.2" value={checkinForm.weight} onChange={e=>setCheckinForm(p=>({...p,weight:e.target.value}))} style={{marginBottom:16}}/>
+            {[["mood","😐 Mood"],["energy","⚡ Energy"],["soreness","💢 Soreness"],["adherence","✅ Adherence"]].map(([key,label])=>(
+              <div key={key} style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:"#555"}}>{label}</span><span className="hd" style={{fontSize:18,color:"#d4ff00"}}>{checkinForm[key]}/5</span></div>
+                <input type="range" min="1" max="5" value={checkinForm[key]} onChange={e=>setCheckinForm(p=>({...p,[key]:parseInt(e.target.value)}))} style={{width:"100%"}}/>
+              </div>
+            ))}
+            <div style={{...lbl,marginTop:8}}>NOTES</div>
+            <textarea rows={3} placeholder="How was your week?" value={checkinForm.notes} onChange={e=>setCheckinForm(p=>({...p,notes:e.target.value}))} style={{marginBottom:12,fontSize:12}}/>
+            <button className="btn" style={{width:"100%",padding:13}} onClick={()=>{if(!checkinForm.weight)return;setCheckins(p=>[...p,{...checkinForm,date:today,id:Date.now()}]);setBodyLog(p=>{const f=p.filter(e=>e.date!==today);return[...f,{date:today,weight:parseFloat(checkinForm.weight),id:Date.now()}].sort((a,b)=>a.date.localeCompare(b.date));});setCheckinForm({weight:"",mood:3,energy:3,soreness:3,adherence:3,notes:""});}}>Save Check-In</button>
+          </div>
+          {checkins.length>=2&&<div style={card}><div className="hd" style={{fontSize:15,marginBottom:12,color:"#d4ff00"}}>WEIGHT TREND</div><ResponsiveContainer width="100%" height={120}><LineChart data={[...checkins].sort((a,b)=>a.date.localeCompare(b.date)).map(c=>({label:c.date.slice(5),weight:parseFloat(c.weight)}))}><XAxis dataKey="label" tick={{fill:"#555",fontSize:10}}/><YAxis tick={{fill:"#555",fontSize:10}} unit="kg" domain={["dataMin-1","dataMax+1"]}/><Tooltip content={<ChartTip/>}/><Line type="monotone" dataKey="weight" stroke="#d4ff00" strokeWidth={2} dot={{fill:"#d4ff00",r:4}} name="Weight" unit="kg"/></LineChart></ResponsiveContainer></div>}
+          {checkins.length>0&&<div style={card}><div className="hd" style={{fontSize:15,marginBottom:12}}>HISTORY</div>{[...checkins].reverse().map((c,i)=><div key={c.id||i} style={{padding:"12px 0",borderBottom:"1px solid #1e1e2e"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontSize:11,color:"#555"}}>{c.date}</span><span className="hd" style={{fontSize:22,color:"#d4ff00"}}>{c.weight}kg</span></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:c.notes?8:0}}>{[["Mood",c.mood],["Energy",c.energy],["Soreness",c.soreness],["Adhere",c.adherence]].map(([l,v])=><div key={l} style={pill}><div style={{fontSize:9,color:"#555"}}>{l}</div><div className="hd" style={{fontSize:16,color:"#d4ff00",marginTop:2}}>{v}/5</div></div>)}</div>{c.notes&&<div style={{fontSize:12,color:"#aaa",background:"#0d1117",padding:"8px 10px",borderRadius:4,borderLeft:"2px solid #d4ff0055",lineHeight:1.6}}>{c.notes}</div>}<button className="ghost" style={{fontSize:10,padding:"3px 8px",marginTop:8,borderColor:"#ff444455",color:"#ff4444"}} onClick={()=>setCheckins(p=>p.filter(x=>x.id!==c.id))}>Delete</button></div>)}</div>}
+        </div>
+      )}
+
+      {tab==="body"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div className="hd" style={{fontSize:22}}>BODY WEIGHT</div>
+          <div style={card}><div style={{...lbl}}>LOG TODAY</div><div style={{display:"flex",gap:8}}><input type="number" placeholder="e.g. 80.5" value={newWeight} onChange={e=>setNewWeight(e.target.value)} style={{maxWidth:180}}/><button className="btn" onClick={()=>{if(!newWeight)return;setBodyLog(p=>{const f=p.filter(e=>e.date!==today);return[...f,{date:today,weight:parseFloat(newWeight),id:Date.now()}].sort((a,b)=>a.date.localeCompare(b.date));});setNewWeight("");}}>Log (kg)</button></div></div>
+          {bodyLog.length>0&&(()=>{
+            const s=[...bodyLog].sort((a,b)=>a.date.localeCompare(b.date));
+            const latest=s[s.length-1].weight,first=s[0].weight,change=+(latest-first).toFixed(1);
+            return<>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>{[["Now",`${latest}kg`],["Change",`${change>=0?"+":""}${change}kg`],["Low",`${Math.min(...s.map(e=>e.weight))}kg`],["High",`${Math.max(...s.map(e=>e.weight))}kg`]].map(([l,v])=><div key={l} style={pill}><div style={{fontSize:9,color:"#555"}}>{l.toUpperCase()}</div><div className="hd" style={{fontSize:18,marginTop:3,color:l==="Change"?(change<0?"#4ade80":change>0?"#ef4444":"#e8e4d9"):"#e8e4d9"}}>{v}</div></div>)}</div>
+              <div style={card}><ResponsiveContainer width="100%" height={180}><LineChart data={s.map(e=>({...e,label:e.date.slice(5)}))}><CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e"/><XAxis dataKey="label" tick={{fill:"#555",fontSize:10}}/><YAxis tick={{fill:"#555",fontSize:10}} unit="kg" domain={["dataMin-1","dataMax+1"]}/><Tooltip content={<ChartTip/>}/><Line type="monotone" dataKey="weight" stroke="#d4ff00" strokeWidth={2} dot={{fill:"#d4ff00",r:3}} name="Weight" unit="kg"/></LineChart></ResponsiveContainer></div>
+              <div style={card}>{s.slice().reverse().slice(0,10).map(entry=><div key={entry.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid #1e1e2e"}}><span style={{fontSize:11,color:"#555"}}>{entry.date}</span><div style={{display:"flex",alignItems:"center",gap:10}}><span className="hd" style={{fontSize:18,color:"#d4ff00"}}>{entry.weight}kg</span><button className="ghost" style={{fontSize:10,padding:"2px 7px"}} onClick={()=>setBodyLog(p=>p.filter(e=>e.id!==entry.id))}>✕</button></div></div>)}</div>
+            </>;
+          })()}
+        </div>
+      )}
+
+      {tab==="photos"&&(()=>{
+        const groups=groupPhotos(bodyImages,photoGroupBy);
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div className="hd" style={{fontSize:22}}>PROGRESS PHOTOS</div><button className="btn" style={{fontSize:12,padding:"8px 14px"}} onClick={()=>bodyImgRef.current?.click()}>+ Add</button></div>
+            <input ref={bodyImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleBodyImg}/>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+              <div style={{fontSize:11,color:"#555"}}>Group by:</div>
+              {["week","month","year"].map(g=><button key={g} onClick={()=>setPhotoGroupBy(g)} style={{padding:"4px 12px",fontSize:11,background:photoGroupBy===g?"#d4ff00":"transparent",border:`1px solid ${photoGroupBy===g?"#d4ff00":"#2a2a3a"}`,borderRadius:20,cursor:"pointer",color:photoGroupBy===g?"#0a0a0f":"#aaa",fontFamily:"inherit"}}>{g.charAt(0).toUpperCase()+g.slice(1)}</button>)}
+              <button onClick={()=>setCompareMode(!compareMode)} style={{marginLeft:"auto",padding:"4px 14px",fontSize:11,background:compareMode?"#f9731644":"transparent",border:`1px solid ${compareMode?"#f97316":"#2a2a3a"}`,borderRadius:20,cursor:"pointer",color:compareMode?"#f97316":"#aaa",fontFamily:"inherit"}}>🔍 Compare {compareMode?"ON":"OFF"}</button>
+            </div>
+            {compareMode&&selectedPhotos.length===2&&<div style={card}><div style={{fontSize:11,color:"#d4ff00",letterSpacing:1,marginBottom:12}}>COMPARISON</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{selectedPhotos.map(id=>{const img=bodyImages.find(i=>i.id===id);return img?<div key={id} style={{borderRadius:8,overflow:"hidden",border:"2px solid #f97316"}}><img src={img.url} alt={img.date} style={{width:"100%",aspectRatio:"3/4",objectFit:"cover",display:"block"}}/><div style={{background:"#0d1117",padding:"6px 8px",fontSize:10,color:"#aaa",textAlign:"center"}}>{img.date}</div></div>:null;})}</div><button className="ghost" style={{width:"100%",marginTop:10,fontSize:11}} onClick={()=>setSelectedPhotos([])}>Clear</button></div>}
+            {compareMode&&selectedPhotos.length<2&&<div style={{fontSize:12,color:"#555",textAlign:"center"}}>Select 2 photos to compare</div>}
+            {bodyImages.length===0&&<div style={{...card,textAlign:"center",padding:"40px",color:"#555",fontSize:13}}>No photos yet.</div>}
+            {Object.entries(groups).map(([groupLabel,imgs])=>(
+              <div key={groupLabel}>
+                <button onClick={()=>setCollapsedPhotoGroups(p=>({...p,[groupLabel]:!p[groupLabel]}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"6px 0",marginBottom:8}}>
+                  <span style={{fontSize:12,color:"#d4ff00",letterSpacing:1,textTransform:"uppercase"}}>{groupLabel} <span style={{color:"#555",fontSize:10}}>({imgs.length})</span></span>
+                  <span style={{color:"#555",fontSize:12}}>{collapsedPhotoGroups[groupLabel]?"▼":"▲"}</span>
+                </button>
+                {!collapsedPhotoGroups[groupLabel]&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{imgs.map((img,i)=>{const isSelected=selectedPhotos.includes(img.id);return(<div key={img.id||i} style={{borderRadius:8,overflow:"hidden",border:`2px solid ${isSelected?"#f97316":"#1e1e2e"}`,cursor:compareMode?"pointer":"default",position:"relative"}} onClick={()=>{if(!compareMode)return;if(isSelected)setSelectedPhotos(p=>p.filter(id=>id!==img.id));else if(selectedPhotos.length<2)setSelectedPhotos(p=>[...p,img.id]);}}>{compareMode&&<div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:isSelected?"#f97316":"#00000088",border:"2px solid #f97316",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#fff"}}>{isSelected?"✓":""}</div>}<img src={img.url} alt={img.date} style={{width:"100%",aspectRatio:"3/4",objectFit:"cover",display:"block"}}/><div style={{background:"#0d1117cc",padding:"5px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:10,color:"#aaa"}}>{img.date}</span>{!compareMode&&<button onClick={()=>setBodyImages(p=>p.filter(x=>x.id!==img.id))} style={{background:"transparent",border:"none",color:"#ff4444",cursor:"pointer",fontSize:12}}>✕</button>}</div></div>);})}</div>}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {tab==="recovery"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div className="hd" style={{fontSize:22}}>RECOVERY LOG</div>
+          <div style={card}>
+            {[["sleep","😴 Sleep Hours","1","12",recoveryLog[today]?.sleep||7,0.5],["energy","⚡ Energy Level","1","5",recoveryLog[today]?.energy||3,1],["soreness","💢 Soreness (1=none)","1","5",recoveryLog[today]?.soreness||1,1]].map(([key,label,min,max,val,step])=>(
+              <div key={key} style={{marginBottom:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:"#555"}}>{label}</span><span className="hd" style={{fontSize:18,color:"#d4ff00"}}>{val}{key==="sleep"?"h":"/5"}</span></div>
+                <input type="range" min={min} max={max} step={step} value={val} onChange={e=>setRecoveryLog(p=>({...p,[today]:{...(p[today]||{sleep:7,energy:3,soreness:1}),[key]:parseFloat(e.target.value)}}))} style={{width:"100%"}}/>
+              </div>
+            ))}
+            {readiness!=null&&<div style={{background:readiness>70?"#0d1a0d":readiness>40?"#1a1800":"#1a0d0d",border:`1px solid ${readiness>70?"#4ade8044":readiness>40?"#facc1544":"#ef444444"}`,borderRadius:6,padding:14,marginTop:8,textAlign:"center"}}><div style={{fontSize:10,color:"#555",marginBottom:4}}>READINESS</div><div className="hd" style={{fontSize:40,color:readiness>70?"#4ade80":readiness>40?"#facc15":"#ef4444"}}>{readiness}<span style={{fontSize:16,color:"#555"}}>/100</span></div><div style={{fontSize:12,color:"#aaa",marginTop:6}}>{readiness>70?"Train hard today 💪":readiness>40?"Moderate session":"Consider rest or light movement"}</div></div>}
+          </div>
+        </div>
+      )}
+
+      {tab==="analytics"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div className="hd" style={{fontSize:22}}>ANALYTICS</div>
+          <div style={card}><div className="hd" style={{fontSize:15,color:"#d4ff00",marginBottom:12}}>WEEKLY VOLUME</div><ResponsiveContainer width="100%" height={160}><BarChart data={getVolumeData()} barSize={22}><CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" vertical={false}/><XAxis dataKey="label" tick={{fill:"#555",fontSize:10}}/><YAxis tick={{fill:"#555",fontSize:10}}/><Tooltip content={<ChartTip/>}/><Bar dataKey="volume" fill="#d4ff0033" stroke="#d4ff00" strokeWidth={1} name="Volume (kg)" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div>
+          <div style={card}><div className="hd" style={{fontSize:15,color:"#d4ff00",marginBottom:12}}>MUSCLE RECOVERY MAP</div><MuscleHeatmap recentMuscles={recentMuscles}/></div>
+          <div style={card}><div className="hd" style={{fontSize:15,color:"#d4ff00",marginBottom:12}}>CALORIE CONSISTENCY</div><ResponsiveContainer width="100%" height={130}><BarChart data={weekCalData} barSize={22}><XAxis dataKey="label" tick={{fill:"#555",fontSize:10}}/><YAxis hide/><Tooltip content={<ChartTip/>}/>{calcResult&&<ReferenceLine y={calcResult.target} stroke="#d4ff0066" strokeDasharray="4 4"/>}<Bar dataKey="calories" fill="#d4ff0033" stroke="#d4ff00" strokeWidth={1} name="Calories" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div>
+          {strengthPBs.length>0&&<div style={card}><div className="hd" style={{fontSize:15,color:"#d4ff00",marginBottom:12}}>TOP LIFTS</div>{strengthPBs.slice(0,5).map(([name,pb])=><div key={name} style={{marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12}}>{name}</span><span className="hd" style={{fontSize:16,color:"#d4ff00"}}>{pb.value}{pb.unit}</span></div><div className="pbar"><div className="pfill" style={{width:`${Math.round((pb.value/strengthPBs[0][1].value)*100)}%`,background:"#d4ff00"}}/></div></div>)}</div>}
+        </div>
+      )}
+
+      {tab==="calculator"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div className="hd" style={{fontSize:22}}>CALORIE CALCULATOR</div>
+          <div style={card}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>{[["AGE","age","28"],["WEIGHT (kg)","weight","80"],["HEIGHT (cm)","height","178"]].map(([l,k,ph])=><div key={k}><div style={{...lbl}}>{l}</div><input type="number" placeholder={`e.g. ${ph}`} value={calc[k]} onChange={e=>setCalc(p=>({...p,[k]:e.target.value}))}/></div>)}<div><div style={{...lbl}}>GENDER</div><select value={calc.gender} onChange={e=>setCalc(p=>({...p,gender:e.target.value}))}><option value="male">Male</option><option value="female">Female</option></select></div></div>
+            <div style={{marginTop:14}}><div style={{...lbl}}>ACTIVITY LEVEL</div>{ACTIVITY_LEVELS.map(al=><button key={al.factor} onClick={()=>setCalc(p=>({...p,activity:al.factor}))} style={{display:"flex",width:"100%",alignItems:"center",gap:10,padding:"9px 12px",marginBottom:5,background:calc.activity===al.factor?"#d4ff0015":"transparent",border:`1px solid ${calc.activity===al.factor?"#d4ff00":"#1e1e2e"}`,borderRadius:4,cursor:"pointer",color:"#e8e4d9",fontFamily:"inherit"}}><div style={{width:7,height:7,borderRadius:"50%",background:calc.activity===al.factor?"#d4ff00":"#2a2a3a",flexShrink:0}}/><div style={{textAlign:"left"}}><div style={{fontSize:12}}>{al.label}</div><div style={{fontSize:10,color:"#555"}}>{al.desc}</div></div></button>)}</div>
+            <div style={{marginTop:14}}><div style={{...lbl}}>GOAL</div><div style={{display:"flex",gap:7}}>{GOALS.map((g,i)=><button key={g.label} onClick={()=>setCalc(p=>({...p,goal:i}))} style={{flex:1,padding:9,background:calc.goal===i?"#d4ff00":"transparent",border:`1px solid ${calc.goal===i?"#d4ff00":"#1e1e2e"}`,borderRadius:4,cursor:"pointer",color:calc.goal===i?"#0a0a0f":"#e8e4d9",fontFamily:"inherit",fontSize:11,fontWeight:calc.goal===i?600:400}}>{g.label}</button>)}</div></div>
+            <button className="btn" style={{width:"100%",marginTop:16,padding:13}} onClick={runCalc}>CALCULATE →</button>
+          </div>
+          {calcResult&&<div style={{...card,borderColor:"#d4ff0033"}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>{[["BMR",calcResult.bmr,"Base rate"],["TDEE",calcResult.tdee,"With activity"],["Target",calcResult.target,GOALS[calc.goal].label]].map(([l,v,s])=><div key={l} style={{background:"#0a0a0f",border:"1px solid #1e1e2e",borderRadius:6,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#555"}}>{l}</div><div className="hd" style={{fontSize:26,color:l==="Target"?"#d4ff00":"#e8e4d9",margin:"4px 0"}}>{v}</div><div style={{fontSize:9,color:"#555"}}>{s}</div></div>)}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[["Protein",calcResult.protein+"g"],["Carbs",calcResult.carbs+"g"],["Fat",calcResult.fat+"g"]].map(([l,v])=><div key={l} style={pill}><div style={{fontSize:9,color:"#555"}}>{l.toUpperCase()}</div><div className="hd" style={{fontSize:20,marginTop:3}}>{v}</div></div>)}</div></div>}
+        </div>
+      )}
+
+      </div>
+
+      {progressModal&&(()=>{const data=getUnifiedProgress(progressModal.exName);const exType=exerciseDB[progressModal.exName]?.type||"Strength";const unitLabel=exType==="Strength"?"kg":exType==="Distance"?"km":exType==="Timed"?"min":"rds";return<div className="modal"><div style={{...card,width:"100%",maxWidth:480,borderColor:"#d4ff0044"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><div><div className="hd" style={{fontSize:16,color:"#d4ff00"}}>{progressModal.exName}</div><div style={{fontSize:10,color:"#555"}}>All sessions combined</div></div><button className="ghost" onClick={()=>setProgressModal(null)}>Close</button></div>{data.length<2?<div style={{textAlign:"center",padding:"30px",color:"#555",fontSize:12}}>Log 2+ sessions to see chart.</div>:<ResponsiveContainer width="100%" height={170}><LineChart data={data}><CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e"/><XAxis dataKey="label" tick={{fill:"#555",fontSize:10}}/><YAxis tick={{fill:"#555",fontSize:10}} unit={unitLabel}/><Tooltip content={<ChartTip/>}/><Line type="monotone" dataKey="value" stroke="#d4ff00" strokeWidth={2} dot={{fill:"#d4ff00",r:4}} name="Value" unit={unitLabel}/></LineChart></ResponsiveContainer>}</div></div>;})()}
+
+      {showAddExModal!=null&&(()=>{const dbNames=Object.keys(exerciseDB).sort();const filteredDB=newExSearch.length>0?dbNames.filter(n=>n.toLowerCase().includes(newExSearch.toLowerCase())):dbNames.slice(0,20);return(<div className="modal" style={{alignItems:"flex-end",padding:0}}><div style={{background:"#0d1117",border:"1px solid #d4ff0033",borderRadius:"16px 16px 0 0",width:"100%",maxWidth:520,margin:"0 auto",maxHeight:"88vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"center",padding:"12px 0 4px"}}><div style={{width:40,height:4,borderRadius:2,background:"#2a2a3a"}}/></div><div style={{padding:"0 20px 24px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div><div className="hd" style={{fontSize:18,color:"#d4ff00"}}>ADD EXERCISE</div><div style={{fontSize:10,color:"#555"}}>Search database or create new</div></div><button className="ghost" style={{fontSize:18,padding:"4px 10px"}} onClick={()=>{setShowAddExModal(null);setNewExSearch("");setNewExName("");}}>✕</button></div><input placeholder="Search exercises..." value={newExSearch} onChange={e=>{setNewExSearch(e.target.value);setNewExName(e.target.value);}} style={{marginBottom:10}}/><div style={{background:"#111118",border:"1px solid #1e1e2e",borderRadius:6,maxHeight:200,overflowY:"auto",marginBottom:12}}>{filteredDB.map(name=><div key={name} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",borderBottom:"1px solid #1e1e2e",cursor:"pointer"}} onClick={()=>{setNewExName(name);setNewExSearch(name);}}><div><div style={{fontSize:12,color:newExName===name?"#d4ff00":"#e8e4d9"}}>{name}</div><div style={{fontSize:9,color:"#555",marginTop:2}}>{exerciseDB[name]?.type} · {(exerciseDB[name]?.muscles||[]).join(", ")}</div></div>{newExName===name&&<span style={{color:"#d4ff00",fontSize:12}}>✓</span>}</div>)}{filteredDB.length===0&&newExSearch.length>0&&<div style={{padding:"12px",fontSize:12,color:"#facc15"}}>✎ "{newExSearch}" will be added as new</div>}</div>{newExName&&!exerciseDB[newExName]&&<div style={{background:"#111118",border:"1px solid #facc1533",borderRadius:6,padding:12,marginBottom:12}}><div style={{fontSize:11,color:"#facc15",marginBottom:10}}>NEW EXERCISE</div><div style={{...lbl}}>TYPE</div><div style={{display:"flex",gap:7,marginBottom:12,flexWrap:"wrap"}}>{EX_TYPES.map(t=><button key={t} onClick={()=>setNewExType(t)} style={{padding:"5px 12px",fontSize:11,background:newExType===t?"#d4ff00":"transparent",border:`1px solid ${newExType===t?"#d4ff00":"#2a2a3a"}`,borderRadius:4,cursor:"pointer",color:newExType===t?"#0a0a0f":"#e8e4d9",fontFamily:"inherit"}}>{t}</button>)}</div><div style={{...lbl}}>MUSCLES</div><MusclePicker selected={newExMuscles} onChange={setNewExMuscles}/></div>}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}><div><div style={{...lbl}}>SETS</div><input type="number" min="1" value={newExSets} onChange={e=>setNewExSets(parseInt(e.target.value)||1)} style={{textAlign:"center"}}/></div><div><div style={{...lbl}}>TARGET REPS</div><input type="number" min="1" value={newExReps} onChange={e=>setNewExReps(parseInt(e.target.value)||1)} style={{textAlign:"center"}}/></div></div><button className="btn" style={{width:"100%",padding:13}} onClick={()=>confirmAddEx(showAddExModal)} disabled={!newExName.trim()}>+ Add to Workout</button></div></div></div>);})()}
+
+      {showImport&&<div className="modal"><div style={{...card,width:"100%",maxWidth:600,borderColor:"#d4ff0044",maxHeight:"90vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div><div className="hd" style={{fontSize:18,color:"#d4ff00"}}>BULK IMPORT</div><div style={{fontSize:10,color:"#555"}}>Paste your plan in any format</div></div><button className="ghost" onClick={()=>{setShowImport(false);setImportText("");setImportPreview(null);}}>✕</button></div><textarea rows={9} placeholder={"Monday - Push Day\nBench Press 4x8"} value={importText} onChange={e=>{setImportText(e.target.value);setImportPreview(null);}} style={{marginBottom:10,fontSize:12,lineHeight:1.7}}/><div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}><button className="btn" style={{padding:"8px 18px"}} onClick={()=>setImportPreview(parseBulk(importText))}>Preview</button><div style={{marginLeft:"auto",display:"flex",gap:7}}>{["replace","add"].map(m=><button key={m} onClick={()=>setImportMode(m)} style={{padding:"6px 12px",fontSize:11,background:importMode===m?"#d4ff00":"transparent",border:`1px solid ${importMode===m?"#d4ff00":"#2a2a3a"}`,borderRadius:4,cursor:"pointer",color:importMode===m?"#0a0a0f":"#e8e4d9",fontFamily:"inherit"}}>{m==="replace"?"Replace":"Add"}</button>)}</div></div>{importPreview&&<div><div style={{fontSize:11,color:"#d4ff00",marginBottom:10}}>{importPreview.length} WORKOUTS DETECTED</div>{importPreview.map((w,i)=><div key={i} style={{background:"#0d1117",border:"1px solid #1e1e2e",borderRadius:6,padding:10,marginBottom:7}}><div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}><span className="tag" style={{fontSize:9}}>{w.day}</span><span className="hd" style={{fontSize:14}}>{w.name}</span></div>{w.exercises.map((ex,j)=><div key={j} style={{fontSize:11,color:"#aaa",padding:"2px 0"}}>· {ex.exName} — {ex.sets}×{ex.targetReps}</div>)}</div>)}<button className="btn" style={{width:"100%",padding:11,marginTop:6}} onClick={confirmImport}>✓ Confirm Import</button></div>}</div></div>}
+
+      {showDataModal&&<div className="modal"><div style={{...card,width:"100%",maxWidth:500,borderColor:"#d4ff0044",maxHeight:"90vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div><div className="hd" style={{fontSize:20,color:"#d4ff00"}}>💾 DATA BACKUP</div><div style={{fontSize:11,color:"#555"}}>Export before updating · import from any version</div></div><button className="ghost" style={{fontSize:18,padding:"4px 10px"}} onClick={()=>setShowDataModal(false)}>✕</button></div><div style={{background:"#0d1117",border:"1px solid #d4ff0033",borderRadius:8,padding:16,marginBottom:16}}><div style={{fontSize:12,color:"#d4ff00",letterSpacing:1,marginBottom:8}}>EXPORT YOUR DATA</div><div style={{fontSize:12,color:"#aaa",lineHeight:1.7,marginBottom:12}}>Downloads a JSON backup of everything. Do this <span style={{color:"#facc15"}}>before</span> updating.</div><button className="btn" style={{width:"100%",padding:13,fontSize:14}} onClick={exportData}>⬇ Download Backup File</button></div><div style={{background:"#0d1117",border:"1px solid #1e1e2e",borderRadius:8,padding:16}}><div style={{fontSize:12,color:"#d4ff00",letterSpacing:1,marginBottom:8}}>RESTORE FROM BACKUP</div><div style={{fontSize:12,color:"#aaa",lineHeight:1.7,marginBottom:12}}>Paste your backup JSON below. Works with all previous FORGE versions.</div><textarea rows={6} placeholder='Paste backup JSON here...' value={dataImportText} onChange={e=>setDataImportText(e.target.value)} style={{marginBottom:10,fontSize:11,lineHeight:1.6}}/>{dataImportStatus&&<div style={{padding:"10px 12px",borderRadius:4,marginBottom:10,fontSize:12,background:dataImportStatus.startsWith("✅")?"#0d1a0d":"#1a0d0d",border:`1px solid ${dataImportStatus.startsWith("✅")?"#4ade8044":"#ef444433"}`,color:dataImportStatus.startsWith("✅")?"#4ade80":"#ef4444"}}>{dataImportStatus}</div>}<button className="btn" style={{width:"100%",padding:13}} disabled={!dataImportText.trim()} onClick={()=>{importData(dataImportText);setDataImportText("");}}>⬆ Restore Data</button><div style={{fontSize:10,color:"#555",marginTop:10,textAlign:"center"}}>⚠️ This will overwrite your current data</div></div></div></div>}
+
+      {showScanner&&<div className="modal" style={{alignItems:"flex-end",padding:0}}><div style={{background:"#0d1117",border:"1px solid #d4ff0033",borderRadius:"16px 16px 0 0",width:"100%",maxWidth:520,margin:"0 auto",maxHeight:"92vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"center",padding:"12px 0 4px"}}><div style={{width:40,height:4,borderRadius:2,background:"#2a2a3a"}}/></div><div style={{padding:"0 20px 24px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div><div className="hd" style={{fontSize:20,color:"#d4ff00"}}>BARCODE SCANNER</div><div style={{fontSize:11,color:"#555"}}>Scan food to auto-fill nutrition</div></div><button className="ghost" style={{fontSize:18,padding:"4px 10px"}} onClick={closeScanner}>✕</button></div>{scannerState==="idle"&&<div style={{display:"flex",flexDirection:"column",gap:12}}><button className="btn" style={{width:"100%",padding:16,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={startCamera}><span style={{fontSize:22}}>📷</span> Open Camera & Scan</button><div style={{textAlign:"center",fontSize:11,color:"#555"}}>— or enter barcode manually —</div><div style={{display:"flex",gap:8}}><input placeholder="e.g. 5000112548167" value={manualBarcode} onChange={e=>setManualBarcode(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&manualBarcode.trim()){setScannedBarcode(manualBarcode.trim());setScannerState("found");lookupBarcode(manualBarcode.trim());}}}/><button className="btn" style={{padding:"8px 16px",whiteSpace:"nowrap"}} onClick={()=>{if(manualBarcode.trim()){setScannedBarcode(manualBarcode.trim());setScannerState("found");lookupBarcode(manualBarcode.trim());}}}>Search</button></div></div>}{scannerState==="scanning"&&<div><div style={{position:"relative",borderRadius:12,overflow:"hidden",background:"#000",marginBottom:14}}><video ref={barcodeVideoRef} style={{width:"100%",maxHeight:280,objectFit:"cover",display:"block"}} playsInline muted/><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{width:220,height:120,border:"2px solid #d4ff00",borderRadius:8,boxShadow:"0 0 0 2000px rgba(0,0,0,0.4)",position:"relative"}}><div style={{position:"absolute",width:"100%",height:2,background:"linear-gradient(90deg,transparent,#d4ff00,transparent)",animation:"scanline 1.5s ease-in-out infinite"}}/></div></div></div><div style={{textAlign:"center",color:"#d4ff00",fontSize:13,marginBottom:14,animation:"pulse 1s ease-in-out infinite"}}>Hold barcode steady...</div><div style={{display:"flex",gap:8}}><button className="ghost" style={{flex:1}} onClick={()=>{stopCamera();setScannerState("manual");}}>Enter Manually</button><button className="ghost" style={{flex:1}} onClick={()=>{stopCamera();setScannerState("idle");}}>Cancel</button></div></div>}{scannerState==="manual"&&<div style={{display:"flex",flexDirection:"column",gap:12}}><div style={{background:"#1a1400",border:"1px solid #facc1533",borderRadius:6,padding:12,fontSize:12,color:"#facc15"}}>⚠️ Enter barcode from packaging.</div><div style={{display:"flex",gap:8}}><input placeholder="Barcode number" value={manualBarcode} onChange={e=>setManualBarcode(e.target.value)} autoFocus onKeyDown={e=>{if(e.key==="Enter"&&manualBarcode.trim()){setScannedBarcode(manualBarcode.trim());setScannerState("found");lookupBarcode(manualBarcode.trim());}}}/><button className="btn" style={{padding:"8px 16px",whiteSpace:"nowrap"}} onClick={()=>{if(manualBarcode.trim()){setScannedBarcode(manualBarcode.trim());setScannerState("found");lookupBarcode(manualBarcode.trim());}}}>Look Up</button></div><button className="ghost" onClick={()=>setScannerState("idle")}>← Back</button></div>}{scannerState==="found"&&<div>{!scannedFood&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:28,marginBottom:12,animation:"spin 1s linear infinite"}}>⚙️</div><div style={{color:"#d4ff00",fontSize:13}}>Looking up {scannedBarcode}...</div></div>}{scannedFood?.notFound&&<div style={{display:"flex",flexDirection:"column",gap:12}}><div style={{background:"#1a0d0d",border:"1px solid #ef444433",borderRadius:8,padding:16,textAlign:"center"}}><div style={{fontSize:28,marginBottom:8}}>🔍</div><div style={{fontSize:13,color:"#ef4444"}}>Product not found</div></div><button className="btn" style={{width:"100%"}} onClick={()=>{setScannerState("idle");setScannedFood(null);setManualBarcode("");}}>Try Another</button></div>}{scannedFood&&!scannedFood.notFound&&<div style={{display:"flex",flexDirection:"column",gap:14}}><div style={{background:"#111118",border:"1px solid #d4ff0033",borderRadius:10,padding:16,display:"flex",gap:14,alignItems:"flex-start"}}>{scannedFood.image?<img src={scannedFood.image} alt={scannedFood.name} style={{width:64,height:64,objectFit:"contain",borderRadius:6,background:"#fff",padding:4,flexShrink:0}}/>:<div style={{width:64,height:64,borderRadius:6,background:"#1e1e2e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>🛒</div>}<div style={{flex:1}}><div style={{fontSize:14,fontWeight:500,lineHeight:1.3,marginBottom:3}}>{scannedFood.name}</div>{scannedFood.brand&&<div style={{fontSize:11,color:"#d4ff00"}}>{scannedFood.brand}</div>}</div></div><div style={{background:"#111118",border:"1px solid #1e1e2e",borderRadius:8,padding:14}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontSize:11,color:"#555"}}>SERVING SIZE</span><div style={{display:"flex",alignItems:"center",gap:6}}><input type="number" value={scanServing} onChange={e=>setScanServing(Math.max(1,parseInt(e.target.value)||1))} style={{width:70,textAlign:"center",padding:"6px 8px"}}/><span style={{fontSize:12,color:"#555"}}>g</span></div></div><input type="range" min="5" max="500" step="5" value={scanServing} onChange={e=>setScanServing(parseInt(e.target.value))} style={{width:"100%",marginBottom:8}}/><div style={{display:"flex",justifyContent:"space-between",gap:6}}>{[30,50,100,150,200].map(s=><button key={s} onClick={()=>setScanServing(s)} style={{flex:1,padding:"5px 0",fontSize:11,background:scanServing===s?"#d4ff00":"transparent",border:`1px solid ${scanServing===s?"#d4ff00":"#2a2a3a"}`,borderRadius:4,cursor:"pointer",color:scanServing===s?"#0a0a0f":"#e8e4d9",fontFamily:"inherit"}}>{s}g</button>)}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>{[["Cals",Math.round(scannedFood.calories*scanServing/100),"kcal","#d4ff00"],["Protein",Math.round(scannedFood.protein*scanServing/100*10)/10,"g","#4ade80"],["Carbs",Math.round(scannedFood.carbs*scanServing/100*10)/10,"g","#facc15"],["Fat",Math.round(scannedFood.fat*scanServing/100*10)/10,"g","#f97316"]].map(([l,v,u,c])=><div key={l} style={{...pill}}><div style={{fontSize:9,color:"#555"}}>{l}</div><div className="hd" style={{fontSize:18,marginTop:3,color:c}}>{v}</div><div style={{fontSize:9,color:"#555"}}>{u}</div></div>)}</div><button className="btn" style={{width:"100%",padding:14,fontSize:14}} onClick={logScannedFood}>✓ Add {scanServing}g to Log</button><button className="ghost" style={{width:"100%"}} onClick={()=>{setScannerState("idle");setScannedFood(null);setManualBarcode("");}}>Scan Another</button></div>}</div>}{scannerState==="error"&&<div style={{display:"flex",flexDirection:"column",gap:12}}><div style={{background:"#1a0d0d",border:"1px solid #ef444433",borderRadius:8,padding:16,textAlign:"center"}}><div style={{fontSize:28,marginBottom:8}}>📵</div><div style={{fontSize:13,color:"#ef4444"}}>Camera denied.</div></div><div style={{display:"flex",gap:8}}><input placeholder="Barcode number" value={manualBarcode} onChange={e=>setManualBarcode(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&manualBarcode.trim()){setScannedBarcode(manualBarcode.trim());setScannerState("found");lookupBarcode(manualBarcode.trim());}}}/><button className="btn" style={{padding:"8px 14px",whiteSpace:"nowrap"}} onClick={()=>{if(manualBarcode.trim()){setScannedBarcode(manualBarcode.trim());setScannerState("found");lookupBarcode(manualBarcode.trim());}}}>Go</button></div></div>}</div></div></div>}
+    </div>
+  );
+}
